@@ -507,6 +507,9 @@
             "enabled": {
               "type": ["boolean", "null"]
             },
+            "scope": {
+              "type": ["string", "null"]
+            },
             "mask": {
               "type": ["boolean", "null"]
             },

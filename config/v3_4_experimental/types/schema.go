@@ -247,6 +247,7 @@ type Unit struct {
 	Enabled  *bool    `json:"enabled,omitempty"`
 	Mask     *bool    `json:"mask,omitempty"`
 	Name     string   `json:"name"`
+	Scope    *string  `json:"scope,omitempty"`
 }
 
 type Verification struct {

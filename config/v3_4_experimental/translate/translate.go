@@ -27,9 +27,20 @@ func translateIgnition(old old_types.Ignition) (ret types.Ignition) {
 	return
 }
 
+func translateUnit(old old_types.Unit) (ret types.Unit) {
+	tr := translate.NewTranslator()
+	tr.Translate(&old.Contents, &ret.Contents)
+	tr.Translate(&old.Dropins, &ret.Dropins)
+	tr.Translate(&old.Enabled, &ret.Enabled)
+	tr.Translate(&old.Mask, &ret.Mask)
+	tr.Translate(&old.Name, &ret.Name)
+	return
+}
+
 func Translate(old old_types.Config) (ret types.Config) {
 	tr := translate.NewTranslator()
 	tr.AddCustomTranslator(translateIgnition)
+	tr.AddCustomTranslator(translateUnit)
 	tr.Translate(&old, &ret)
 	return
 }

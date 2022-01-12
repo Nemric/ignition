@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	PresetPath               string      = "/etc/systemd/system-preset/20-ignition.preset"
+	// PresetPath               string      = "/etc/systemd/system-preset/20-ignition.preset"
 	DefaultPresetPermissions os.FileMode = 0644
 )
 
@@ -41,7 +41,7 @@ func (ut Util) FileFromSystemdUnit(unit types.Unit) (FetchOp, error) {
 		return FetchOp{}, err
 	}
 
-	path, err := ut.JoinPath(SystemdUnitsPath(), unit.Name)
+	path, err := ut.JoinPath(SystemdUnitsPath(unit), unit.Name)
 	if err != nil {
 		return FetchOp{}, err
 	}
@@ -64,7 +64,7 @@ func (ut Util) FileFromSystemdUnitDropin(unit types.Unit, dropin types.Dropin) (
 		return FetchOp{}, err
 	}
 
-	path, err := ut.JoinPath(SystemdDropinsPath(string(unit.Name)), dropin.Name)
+	path, err := ut.JoinPath(SystemdDropinsPath(unit), dropin.Name)
 	if err != nil {
 		return FetchOp{}, err
 	}
@@ -80,7 +80,7 @@ func (ut Util) FileFromSystemdUnitDropin(unit types.Unit, dropin types.Dropin) (
 // MaskUnit writes a symlink to /dev/null to mask the specified unit and returns the path of that unit
 // without the sysroot prefix
 func (ut Util) MaskUnit(unit types.Unit) (string, error) {
-	path, err := ut.JoinPath(SystemdUnitsPath(), unit.Name)
+	path, err := ut.JoinPath(SystemdUnitsPath(unit), unit.Name)
 	if err != nil {
 		return "", err
 	}
@@ -95,12 +95,12 @@ func (ut Util) MaskUnit(unit types.Unit) (string, error) {
 		return "", err
 	}
 	// not the same as the path above, since this lacks the sysroot prefix
-	return filepath.Join("/", SystemdUnitsPath(), unit.Name), nil
+	return filepath.Join("/", SystemdUnitsPath(unit), unit.Name), nil
 }
 
 // UnmaskUnit deletes the symlink to /dev/null for a masked unit
 func (ut Util) UnmaskUnit(unit types.Unit) error {
-	path, err := ut.JoinPath(SystemdUnitsPath(), unit.Name)
+	path, err := ut.JoinPath(SystemdUnitsPath(unit), unit.Name)
 	if err != nil {
 		return err
 	}
@@ -120,7 +120,7 @@ func (ut Util) UnmaskUnit(unit types.Unit) error {
 
 // IsUnitMasked returns true/false if a systemd unit is masked
 func (ut Util) IsUnitMasked(unit types.Unit) (bool, error) {
-	path, err := ut.JoinPath(SystemdUnitsPath(), unit.Name)
+	path, err := ut.JoinPath(SystemdUnitsPath(unit), unit.Name)
 	if err != nil {
 		return false, err
 	}
@@ -146,16 +146,16 @@ func (ut Util) IsUnitMasked(unit types.Unit) (bool, error) {
 	return true, nil
 }
 
-func (ut Util) EnableUnit(enabledUnit string) error {
-	return ut.appendLineToPreset(fmt.Sprintf("enable %s", enabledUnit))
+func (ut Util) EnableUnit(enabledUnit string, presetpath string) error {
+	return ut.appendLineToPreset(fmt.Sprintf("enable %s", enabledUnit), presetpath)
 }
 
-func (ut Util) DisableUnit(disabledUnit string) error {
-	return ut.appendLineToPreset(fmt.Sprintf("disable %s", disabledUnit))
+func (ut Util) DisableUnit(disabledUnit string, presetpath string) error {
+	return ut.appendLineToPreset(fmt.Sprintf("disable %s", disabledUnit), presetpath)
 }
 
-func (ut Util) appendLineToPreset(data string) error {
-	path, err := ut.JoinPath(PresetPath)
+func (ut Util) appendLineToPreset(data string, presetpath string) error {
+	path, err := ut.JoinPath(presetpath)
 	if err != nil {
 		return err
 	}

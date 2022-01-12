@@ -16,12 +16,29 @@ package util
 
 import (
 	"path/filepath"
+
+	"github.com/coreos/ignition/v2/config/v3_4_experimental/types"
 )
 
-func SystemdUnitsPath() string {
-	return filepath.Join("etc", "systemd", "system")
+func SystemdUnitsPath(unit types.Unit) string {
+	return unit.GetBasePath()
 }
 
-func SystemdDropinsPath(unitName string) string {
-	return filepath.Join("etc", "systemd", "system", unitName+".d")
+func SystemdPresetPath(unit types.Unit) string {
+	switch unit.GetScope() {
+	case types.UserUnit:
+		return filepath.Join("etc", "systemd", "user-preset", "20-ignition.preset")
+	case types.SystemUnit:
+		return filepath.Join("etc", "systemd", "system-preset", "20-ignition.preset")
+	default:
+		return filepath.Join("etc", "systemd", "system-preset", "20-ignition.preset")
+	}
+}
+
+func SystemdWantsPath(unit types.Unit) string {
+	return filepath.Join(SystemdUnitsPath(unit), unit.Name+".wants")
+}
+
+func SystemdDropinsPath(unit types.Unit) string {
+	return filepath.Join(SystemdUnitsPath(unit), unit.Name+".d")
 }

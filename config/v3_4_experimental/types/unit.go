@@ -17,6 +17,7 @@ package types
 import (
 	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/coreos/ignition/v2/config/shared/errors"
@@ -26,6 +27,13 @@ import (
 	"github.com/coreos/go-systemd/v22/unit"
 	cpath "github.com/coreos/vcontext/path"
 	"github.com/coreos/vcontext/report"
+)
+
+type UnitScope string
+
+const (
+	SystemUnit UnitScope = "system"
+	UserUnit   UnitScope = "user"
 )
 
 func (u Unit) Key() string {
@@ -43,8 +51,20 @@ func (u Unit) Validate(c cpath.ContextPath) (r report.Report) {
 	r.AddOnError(c, err)
 
 	r.AddOnWarn(c, validations.ValidateInstallSection(u.Name, util.IsTrue(u.Enabled), util.NilOrEmpty(u.Contents), opts))
-
+	r.AddOnError(c.Append("scope"), validateScope(u.Scope))
 	return
+}
+
+func validateScope(scope *string) error {
+	if scope == nil {
+		return nil
+	}
+	switch *scope {
+	case "system", "user":
+		return nil
+	default:
+		return errors.ErrInvalidUnitScope
+	}
 }
 
 func validateName(name string) error {
@@ -79,4 +99,23 @@ func validateUnitContent(content *string) ([]*unit.UnitOption, error) {
 		return nil, fmt.Errorf("invalid unit content: %s", err)
 	}
 	return opts, nil
+}
+
+func (u Unit) GetScope() UnitScope {
+	if u.Scope == nil {
+		return UnitScope(*util.StrToPtr("system"))
+	} else {
+		return UnitScope(*u.Scope)
+	}
+}
+
+func (u Unit) GetBasePath() string {
+	switch u.GetScope() {
+	case UserUnit:
+		return filepath.Join("etc", "systemd", "user")
+	case SystemUnit:
+		return filepath.Join("etc", "systemd", "system")
+	default:
+		return filepath.Join("etc", "systemd", "system")
+	}
 }

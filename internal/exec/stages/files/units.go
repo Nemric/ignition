@@ -17,6 +17,7 @@ package files
 import (
 	"fmt"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/coreos/ignition/v2/config/shared/errors"
@@ -33,6 +34,7 @@ type Preset struct {
 	enabled        bool
 	instantiatable bool
 	instances      []string
+	path           string
 }
 
 // warnOnOldSystemdVersion checks the version of Systemd
@@ -73,12 +75,12 @@ func (s *stage) createUnits(config types.Config) error {
 				if _, ok := presets[key]; ok {
 					presets[key].instances = append(presets[key].instances, instance)
 				} else {
-					presets[key] = &Preset{unitName, *unit.Enabled, true, []string{instance}}
+					presets[key] = &Preset{unitName, *unit.Enabled, true, []string{instance}, util.SystemdPresetPath(unit)}
 				}
 			} else {
 				key := fmt.Sprintf("%s-%s", unit.Name, identifier)
 				if _, ok := presets[unit.Name]; !ok {
-					presets[key] = &Preset{unit.Name, *unit.Enabled, false, []string{}}
+					presets[key] = &Preset{unit.Name, *unit.Enabled, false, []string{}, util.SystemdPresetPath(unit)}
 				} else {
 					return fmt.Errorf("%q key is already present in the presets map", key)
 				}
@@ -118,10 +120,11 @@ func (s *stage) createUnits(config types.Config) error {
 	}
 	// if we have presets then create the systemd preset file.
 	if len(presets) != 0 {
-		if err := s.relabelPath(filepath.Join(s.DestDir, util.PresetPath)); err != nil {
-			return err
-		}
-		if err := s.createSystemdPresetFile(presets); err != nil {
+		// useless as it will be done later in createSystemdPresetFiles
+		// if err := s.relabelPath(filepath.Join(s.DestDir, util.PresetPath)); err != nil {
+		// 	return err
+		// }
+		if err := s.createSystemdPresetFiles(presets); err != nil {
 			return err
 		}
 	}
@@ -148,27 +151,27 @@ func parseInstanceUnit(unit types.Unit) (string, string, error) {
 
 // createSystemdPresetFile creates the presetfile for enabled/disabled
 // systemd units.
-func (s *stage) createSystemdPresetFile(presets map[string]*Preset) error {
+func (s *stage) createSystemdPresetFiles(presets map[string]*Preset) error {
 	hasInstanceUnit := false
-	for _, value := range presets {
-		unitString := value.unit
-		if value.instantiatable {
+	for _, preset := range presets {
+		unitString := preset.unit
+		if preset.instantiatable {
 			hasInstanceUnit = true
 			// Let's say we have two instantiated enabled units listed under
 			// the systemd units i.e. echo@foo.service, echo@bar.service
 			// then the unitString will look like "echo@.service foo bar"
-			unitString = fmt.Sprintf("%s %s", unitString, strings.Join(value.instances, " "))
+			unitString = fmt.Sprintf("%s %s", unitString, strings.Join(preset.instances, " "))
 		}
-		if value.enabled {
+		if preset.enabled {
 			if err := s.Logger.LogOp(
-				func() error { return s.EnableUnit(unitString) },
+				func() error { return s.EnableUnit(unitString, preset.path) },
 				"setting preset to enabled for %q", unitString,
 			); err != nil {
 				return err
 			}
 		} else {
 			if err := s.Logger.LogOp(
-				func() error { return s.DisableUnit(unitString) },
+				func() error { return s.DisableUnit(unitString, preset.path) },
 				"setting preset to disabled for %q", unitString,
 			); err != nil {
 				return err
@@ -183,7 +186,26 @@ func (s *stage) createSystemdPresetFile(presets map[string]*Preset) error {
 			return err
 		}
 	}
-	s.relabel(util.PresetPath)
+
+	//getting all paths from presets
+	var paths []string
+	for _, preset := range presets {
+		paths = append(paths, preset.path)
+	}
+	sort.Slice(paths, func(i, j int) bool {
+		return paths[i] < paths[j]
+	})
+	//running accros differents paths not to apply them s.relabalpath more than once
+	var tmppath string = ""
+	for _, path := range paths {
+		if path != tmppath {
+			if err := s.relabelPath(filepath.Join(s.DestDir, path)); err != nil {
+				return err
+			}
+		}
+		tmppath = path
+	}
+
 	return nil
 }
 

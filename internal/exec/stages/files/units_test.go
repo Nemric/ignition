@@ -15,16 +15,13 @@
 package files
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
 	"github.com/coreos/ignition/v2/config/shared/errors"
 	cfgutil "github.com/coreos/ignition/v2/config/util"
-	"github.com/coreos/ignition/v2/config/v3_4_experimental"
 	"github.com/coreos/ignition/v2/config/v3_4_experimental/types"
 	"github.com/coreos/ignition/v2/internal/exec/util"
-	"github.com/coreos/ignition/v2/internal/log"
 )
 
 func TestParseInstanceUnit(t *testing.T) {
@@ -164,33 +161,33 @@ func TestSystemdPresetPath(t *testing.T) {
 	}
 }
 
-func TestCreateUnits(t *testing.T) {
+// func TestCreateUnits(t *testing.T) {
 
-	config, report, err := v3_4_experimental.Parse([]byte(`{"ignition":{"version":"3.4.0-experimental"},"systemd":{"units":[{"contents":"[Unit]\nDescription=Prometheus node exporter\n[Install]\nWantedBy=multi-user.target\n","enabled":true,"name":"exporter.service"},{"contents":"[Unit]\nDescription=promtail.service\n[Install]\nWantedBy=multi-user.target default.target","enabled":true,"name":"promtail.service","scope":"user"},{"contents":"[Unit]\nDescription=promtail.service\n[Install]\nWantedBy=multi-user.target default.target","enabled":true,"name":"grafana.service","scope":"system"}]}}`))
+// 	config, report, err := v3_4_experimental.Parse([]byte(`{"ignition":{"version":"3.4.0-experimental"},"systemd":{"units":[{"contents":"[Unit]\nDescription=Prometheus node exporter\n[Install]\nWantedBy=multi-user.target\n","enabled":true,"name":"exporter.service"},{"contents":"[Unit]\nDescription=promtail.service\n[Install]\nWantedBy=multi-user.target default.target","enabled":true,"name":"promtail.service","scope":"user"},{"contents":"[Unit]\nDescription=promtail.service\n[Install]\nWantedBy=multi-user.target default.target","enabled":true,"name":"grafana.service","scope":"system"}]}}`))
 
-	if err != nil {
-		print(report.Entries, err.Error())
-	}
+// 	if err != nil {
+// 		print(report.Entries, err.Error())
+// 	}
 
-	fmt.Printf("config: %v\n", config)
+// 	fmt.Printf("config: %v\n", config)
 
-	tests := []struct {
-		in  types.Config
-		out error
-	}{
-		{
-			config,
-			nil,
-		},
-	}
+// 	tests := []struct {
+// 		in  types.Config
+// 		out error
+// 	}{
+// 		{
+// 			config,
+// 			nil,
+// 		},
+// 	}
 
-	for i, test := range tests {
-		var logg log.Logger = log.New(true)
-		var st stage
-		st.Logger = &logg
-		test.out = st.createUnits(test.in)
-		if test.out != nil {
-			t.Errorf("#%d: error occured: %v", i, test.out)
-		}
-	}
-}
+// 	for i, test := range tests {
+// 		var logg log.Logger = log.New(true)
+// 		var st stage
+// 		st.Logger = &logg
+// 		test.out = st.createUnits(test.in)
+// 		if test.out != nil {
+// 			t.Errorf("#%d: error occured: %v", i, test.out)
+// 		}
+// 	}
+// }

@@ -85,7 +85,7 @@ var (
 	ErrInvalidSystemdDropinExt = errors.New("invalid systemd drop-in extension")
 	ErrNoSystemdExt            = errors.New("no systemd unit extension")
 	ErrInvalidInstantiatedUnit = errors.New("invalid systemd instantiated unit")
-	ErrInvalidUnitScope        = errors.New("invalid unit scope (system, user)")
+	ErrInvalidUnitScope        = errors.New("unit scope must be system or user")
 
 	// Misc errors
 	ErrSourceRequired                  = errors.New("source is required")

@@ -271,34 +271,7 @@ func TestCreateUnits(t *testing.T) {
 					"dropins": [{
 						"name": "debug.conf",
 						"contents": "[Service]\nEnvironment=SYSTEMD_LOG_LEVEL=debug"
-					  }]
-				},
-				{
-					"name": "echo@.service",
-					"contents": "[Unit]\nDescription=f\n[Service]\nType=oneshot\nExecStart=/bin/echo %i\nRemainAfterExit=yes\n[Install]\nWantedBy=multi-user.target\n"
-				},
-				{
-					"enabled": true,
-					"name": "echo@bar.service"
-				},
-				{
-					"enabled": true,
-					"name": "echo@foo.service"
-				},
-				{
-					"name": "echo@.service",
-					"contents": "[Unit]\nDescription=f\n[Service]\nType=oneshot\nExecStart=/bin/echo %i\nRemainAfterExit=yes\n[Install]\nWantedBy=multi-user.target\n",
-					"scope":"global"
-				},
-				{
-					"enabled": true,
-					"name": "echo@bar.service",
-					"scope":"global"
-				},
-				{
-					"enabled": true,
-					"name": "echo@foo.service",
-					"scope":"global"
+					}]
 				}
 			]
 		}

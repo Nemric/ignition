@@ -34,7 +34,7 @@ type Preset struct {
 	enabled        bool
 	instantiatable bool
 	instances      []string
-	path           string
+	scope          util.UnitScope
 }
 
 // warnOnOldSystemdVersion checks the version of Systemd
@@ -71,16 +71,17 @@ func (s *stage) createUnits(config types.Config) error {
 				if err != nil {
 					return err
 				}
-				key := fmt.Sprintf("%s-%s", unitName, identifier)
+				// key := fmt.Sprintf("%s-%s", unitName, identifier)
+				key := fmt.Sprintf("%s-%s", unit.Key(), identifier)
 				if _, ok := presets[key]; ok {
 					presets[key].instances = append(presets[key].instances, instance)
 				} else {
-					presets[key] = &Preset{unitName, *unit.Enabled, true, []string{instance}, util.SystemdPresetPath(unit)}
+					presets[key] = &Preset{unitName, *unit.Enabled, true, []string{instance}, util.GetUnitScope(unit)}
 				}
 			} else {
-				key := fmt.Sprintf("%s-%s", unit.Name, identifier)
-				if _, ok := presets[unit.Name]; !ok {
-					presets[key] = &Preset{unit.Name, *unit.Enabled, false, []string{}, util.SystemdPresetPath(unit)}
+				key := fmt.Sprintf("%s-%s", unit.Key(), identifier)
+				if _, ok := presets[key]; !ok {
+					presets[key] = &Preset{unit.Name, *unit.Enabled, false, []string{}, util.GetUnitScope(unit)}
 				} else {
 					return fmt.Errorf("%q key is already present in the presets map", key)
 				}
@@ -88,18 +89,23 @@ func (s *stage) createUnits(config types.Config) error {
 		}
 		if unit.Mask != nil {
 			if *unit.Mask { // mask: true
-				relabelpath := ""
+				// relabelpaths := []string{}
 				if err := s.Logger.LogOp(
 					func() error {
-						var err error
-						relabelpath, err = s.MaskUnit(unit)
+						// var err error
+						// relabelpaths, err = s.MaskUnit(unit)
+						var err error = s.MaskUnit(unit)
 						return err
 					},
-					"masking unit %q", unit.Name,
+					"masking unit %q", unit.Key(),
 				); err != nil {
 					return err
 				}
-				s.relabel(relabelpath)
+
+				// for _, path := range relabelpaths {
+				// 	s.relabel(path[len(s.DestDir):])
+				// }
+
 			} else { // mask: false
 				masked, err := s.IsUnitMasked(unit)
 				if err != nil {
@@ -110,7 +116,7 @@ func (s *stage) createUnits(config types.Config) error {
 						func() error {
 							return s.UnmaskUnit(unit)
 						},
-						"unmasking unit %q", unit.Name,
+						"unmasking unit %q", unit.Key(),
 					); err != nil {
 						return err
 					}
@@ -164,14 +170,14 @@ func (s *stage) createSystemdPresetFiles(presets map[string]*Preset) error {
 		}
 		if preset.enabled {
 			if err := s.Logger.LogOp(
-				func() error { return s.EnableUnit(unitString, preset.path) },
+				func() error { return s.EnableUnit(unitString, preset.scope) },
 				"setting preset to enabled for %q", unitString,
 			); err != nil {
 				return err
 			}
 		} else {
 			if err := s.Logger.LogOp(
-				func() error { return s.DisableUnit(unitString, preset.path) },
+				func() error { return s.DisableUnit(unitString, preset.scope) },
 				"setting preset to disabled for %q", unitString,
 			); err != nil {
 				return err
@@ -190,7 +196,7 @@ func (s *stage) createSystemdPresetFiles(presets map[string]*Preset) error {
 	//getting all paths from presets
 	var paths []string
 	for _, preset := range presets {
-		paths = append(paths, preset.path)
+		paths = append(paths, s.SystemdPresetPath(preset.scope))
 	}
 	sort.Slice(paths, func(i, j int) bool {
 		return paths[i] < paths[j]
@@ -214,30 +220,32 @@ func (s *stage) createSystemdPresetFiles(presets map[string]*Preset) error {
 // applies to the unit's dropins.
 func (s *stage) writeSystemdUnit(unit types.Unit) error {
 	return s.Logger.LogOp(func() error {
-		relabeledDropinDir := false
 		for _, dropin := range unit.Dropins {
 			if dropin.Contents == nil {
 				continue
 			}
-			f, err := s.FileFromSystemdUnitDropin(unit, dropin)
+			fetchops, err := s.FilesFromSystemdUnitDropin(unit, dropin)
 			if err != nil {
 				s.Logger.Crit("error converting systemd dropin: %v", err)
 				return err
 			}
-			// trim off prefix since this needs to be relative to the sysroot
-			if !strings.HasPrefix(f.Node.Path, s.DestDir) {
-				panic(fmt.Sprintf("Dropin path %s isn't under prefix %s", f.Node.Path, s.DestDir))
-			}
-			relabelPath := f.Node.Path[len(s.DestDir):]
-			if err := s.Logger.LogOp(
-				func() error { return s.PerformFetch(f) },
-				"writing systemd drop-in %q at %q", dropin.Name, f.Node.Path,
-			); err != nil {
-				return err
-			}
-			if !relabeledDropinDir {
-				s.relabel(filepath.Dir(relabelPath))
-				relabeledDropinDir = true
+			for _, f := range fetchops {
+				relabeledDropinDir := false
+				// trim off prefix since this needs to be relative to the sysroot
+				if !strings.HasPrefix(f.Node.Path, s.DestDir) {
+					panic(fmt.Sprintf("Dropin path %s isn't under prefix %s", f.Node.Path, s.DestDir))
+				}
+				relabelPath := f.Node.Path[len(s.DestDir):]
+				if err := s.Logger.LogOp(
+					func() error { return s.PerformFetch(f) },
+					"writing systemd drop-in %q at %q", dropin.Name, f.Node.Path,
+				); err != nil {
+					return err
+				}
+				if !relabeledDropinDir {
+					s.relabel(filepath.Dir(relabelPath))
+					relabeledDropinDir = true
+				}
 			}
 		}
 
@@ -245,24 +253,28 @@ func (s *stage) writeSystemdUnit(unit types.Unit) error {
 			return nil
 		}
 
-		f, err := s.FileFromSystemdUnit(unit)
+		fetchops, err := s.FilesFromSystemdUnit(unit)
 		if err != nil {
 			s.Logger.Crit("error converting unit: %v", err)
 			return err
 		}
-		// trim off prefix since this needs to be relative to the sysroot
-		if !strings.HasPrefix(f.Node.Path, s.DestDir) {
-			panic(fmt.Sprintf("Unit path %s isn't under prefix %s", f.Node.Path, s.DestDir))
+
+		for _, f := range fetchops {
+			// trim off prefix since this needs to be relative to the sysroot
+			if !strings.HasPrefix(f.Node.Path, s.DestDir) {
+				panic(fmt.Sprintf("Unit path %s isn't under prefix %s", f.Node.Path, s.DestDir))
+			}
+			relabelPath := f.Node.Path[len(s.DestDir):]
+			if err := s.Logger.LogOp(
+				func() error { return s.PerformFetch(f) },
+				"writing unit %q at %q", unit.Key(), f.Node.Path,
+			); err != nil {
+				return err
+			}
+
+			s.relabel(relabelPath)
 		}
-		relabelPath := f.Node.Path[len(s.DestDir):]
-		if err := s.Logger.LogOp(
-			func() error { return s.PerformFetch(f) },
-			"writing unit %q at %q", unit.Name, f.Node.Path,
-		); err != nil {
-			return err
-		}
-		s.relabel(relabelPath)
 
 		return nil
-	}, "processing unit %q", unit.Name)
+	}, "processing unit %q", unit.Key())
 }

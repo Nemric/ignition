@@ -20,25 +20,44 @@ import (
 	"github.com/coreos/ignition/v2/config/v3_4_experimental/types"
 )
 
-func SystemdUnitsPath(unit types.Unit) string {
-	return unit.GetBasePath()
+func (u Util) SystemdUnitPaths(unit types.Unit) []string {
+	var paths []string
+	switch GetUnitScope(unit) {
+	case UserUnit:
+		for _, user := range unit.Users {
+			home, err := u.GetUserHomeDirByName(string(user))
+			if err != nil {
+				print(home, err)
+			}
+			paths = append(paths, filepath.Join(home, ".config", "systemd", "user"))
+		}
+	case SystemUnit:
+		paths = append(paths, filepath.Join("etc", "systemd", "system"))
+	case GlobalUnit:
+		paths = append(paths, filepath.Join("etc", "systemd", "user"))
+	default:
+		paths = append(paths, filepath.Join("etc", "systemd", "system"))
+	}
+	return paths
 }
 
-func SystemdPresetPath(unit types.Unit) string {
-	switch unit.GetScope() {
-	case types.UserUnit:
-		return filepath.Join("etc", "systemd", "user-preset", "20-ignition.preset")
-	case types.SystemUnit:
+func (u Util) SystemdPresetPath(scope UnitScope) string {
+	switch scope {
+	case UserUnit:
+		return filepath.Join("etc", "systemd", "user-preset", "21-ignition-user.preset")
+	case SystemUnit:
 		return filepath.Join("etc", "systemd", "system-preset", "20-ignition.preset")
+	case GlobalUnit:
+		return filepath.Join("etc", "systemd", "user-preset", "20-ignition-global.preset")
 	default:
 		return filepath.Join("etc", "systemd", "system-preset", "20-ignition.preset")
 	}
 }
 
-func SystemdWantsPath(unit types.Unit) string {
-	return filepath.Join(SystemdUnitsPath(unit), unit.Name+".wants")
-}
-
-func SystemdDropinsPath(unit types.Unit) string {
-	return filepath.Join(SystemdUnitsPath(unit), unit.Name+".d")
+func (u Util) SystemdDropinsPaths(unit types.Unit) []string {
+	var paths []string
+	for _, path := range u.SystemdUnitPaths(unit) {
+		paths = append(paths, filepath.Join(path, unit.Name+".d"))
+	}
+	return paths
 }

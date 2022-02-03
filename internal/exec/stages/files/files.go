@@ -121,9 +121,7 @@ func (s *stage) relabeling() bool {
 func (s *stage) relabel(paths ...string) {
 	if s.toRelabel != nil {
 		for _, path := range paths {
-			if !s.ToRelabelContains(path) {
-				s.toRelabel = append(s.toRelabel, filepath.Join(s.DestDir, path))
-			}
+			s.toRelabel = append(s.toRelabel, filepath.Join(s.DestDir, path))
 		}
 	}
 }
@@ -142,14 +140,4 @@ func (s *stage) relabelFiles() error {
 	// labeling for files created by processes we call out to, like `useradd`.
 
 	return s.RelabelFiles(s.toRelabel)
-}
-
-//add a check for not relabelling path more than once
-func (s *stage) ToRelabelContains(value string) bool {
-	for _, val := range s.toRelabel {
-		if val == value {
-			return true
-		}
-	}
-	return false
 }

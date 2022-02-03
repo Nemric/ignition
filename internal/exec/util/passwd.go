@@ -142,6 +142,14 @@ func (u Util) GetUserHomeDir(c types.PasswdUser) (string, error) {
 	return usr.HomeDir, nil
 }
 
+func (u Util) GetUserHomeDirByName(name string) (string, error) {
+	usr, err := u.userLookup(name)
+	if err != nil {
+		return "", err
+	}
+	return usr.HomeDir, nil
+}
+
 // CheckIfUserExists will return Info log when user is empty
 func (u Util) CheckIfUserExists(c types.PasswdUser) (bool, error) {
 	_, err := u.userLookup(c.Name)

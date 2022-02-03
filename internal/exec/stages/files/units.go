@@ -71,8 +71,8 @@ func (s *stage) createUnits(config types.Config) error {
 				if err != nil {
 					return err
 				}
-				// key := fmt.Sprintf("%s-%s", unitName, identifier)
-				key := fmt.Sprintf("%s-%s", unit.Key(), identifier)
+				key := fmt.Sprintf("%s.%s-%s", util.GetUnitScope(unit), unitName, identifier)
+				// key := fmt.Sprintf("%s-%s", unit.Key(), identifier)
 				if _, ok := presets[key]; ok {
 					presets[key].instances = append(presets[key].instances, instance)
 				} else {

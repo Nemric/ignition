@@ -17,7 +17,6 @@ package files
 import (
 	"fmt"
 	"path/filepath"
-	"sort"
 	"strings"
 
 	"github.com/coreos/ignition/v2/config/shared/errors"
@@ -158,6 +157,20 @@ func parseInstanceUnit(unit types.Unit) (string, string, error) {
 // createSystemdPresetFile creates the presetfile for enabled/disabled
 // systemd units.
 func (s *stage) createSystemdPresetFiles(presets map[string]*Preset) error {
+
+	//getting directories from presets file for relabling
+	paths := make(map[string]bool)
+	for _, preset := range presets {
+		path := filepath.Dir(s.SystemdPresetPath(preset.scope))
+		if _, value := paths[path]; !value {
+			paths[path] = false
+			if err := s.relabelPath(filepath.Join(s.DestDir, path)); err != nil {
+				return err
+			}
+			paths[path] = true
+		}
+	}
+
 	hasInstanceUnit := false
 	for _, preset := range presets {
 		unitString := preset.unit
@@ -191,25 +204,6 @@ func (s *stage) createSystemdPresetFiles(presets map[string]*Preset) error {
 		if err := s.warnOnOldSystemdVersion(); err != nil {
 			return err
 		}
-	}
-
-	//getting all paths from presets
-	var paths []string
-	for _, preset := range presets {
-		paths = append(paths, s.SystemdPresetPath(preset.scope))
-	}
-	sort.Slice(paths, func(i, j int) bool {
-		return paths[i] < paths[j]
-	})
-	//running accros differents paths not to apply them s.relabalpath more than once
-	var tmppath string = ""
-	for _, path := range paths {
-		if path != tmppath {
-			if err := s.relabelPath(filepath.Join(s.DestDir, path)); err != nil {
-				return err
-			}
-		}
-		tmppath = path
 	}
 
 	return nil

@@ -174,11 +174,11 @@ func TestSystemdPresetPath(t *testing.T) {
 		},
 		{
 			types.Unit{Name: "test.service", Scope: cfgutil.StrToPtr("user")},
-			"etc/systemd/user-preset/21-ignition-user.preset",
+			"etc/systemd/user-preset/21-ignition.preset",
 		},
 		{
 			types.Unit{Name: "test.service", Scope: cfgutil.StrToPtr("global")},
-			"etc/systemd/user-preset/20-ignition-global.preset",
+			"etc/systemd/user-preset/20-ignition.preset",
 		},
 	}
 

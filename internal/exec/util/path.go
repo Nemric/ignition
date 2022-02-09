@@ -44,11 +44,11 @@ func (u Util) SystemdUnitPaths(unit types.Unit) []string {
 func (u Util) SystemdPresetPath(scope UnitScope) string {
 	switch scope {
 	case UserUnit:
-		return filepath.Join("etc", "systemd", "user-preset", "21-ignition-user.preset")
+		return filepath.Join("etc", "systemd", "user-preset", "21-ignition.preset")
 	case SystemUnit:
 		return filepath.Join("etc", "systemd", "system-preset", "20-ignition.preset")
 	case GlobalUnit:
-		return filepath.Join("etc", "systemd", "user-preset", "20-ignition-global.preset")
+		return filepath.Join("etc", "systemd", "user-preset", "20-ignition.preset")
 	default:
 		return filepath.Join("etc", "systemd", "system-preset", "20-ignition.preset")
 	}

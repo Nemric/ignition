@@ -72,7 +72,7 @@ github.com/aws/aws-sdk-go/service/sts/stsiface
 github.com/beevik/etree
 # github.com/coreos/go-json v0.0.0-20211020211907-c63f628265de
 github.com/coreos/go-json
-# github.com/coreos/go-semver v0.3.0
+# github.com/coreos/go-semver v0.3.1
 ## explicit
 github.com/coreos/go-semver/semver
 # github.com/coreos/go-systemd/v22 v22.3.2

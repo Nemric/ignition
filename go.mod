@@ -7,7 +7,7 @@ require (
 	cloud.google.com/go/storage v1.22.1
 	github.com/aws/aws-sdk-go v1.44.32
 	github.com/beevik/etree v1.1.1-0.20200718192613-4a2f8b9d084c
-	github.com/coreos/go-semver v0.3.0
+	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.3.2
 	github.com/coreos/vcontext v0.0.0-20220603180515-2076d8d16945
 	github.com/google/renameio/v2 v2.0.0
